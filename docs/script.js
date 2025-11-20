@@ -28,7 +28,6 @@ const connectMediaButton = document.getElementById('connect-media');
 // =============================
 const LOCAL_STORAGE_KEY = 'peerjsTesterConfig';
 const DEFAULT_ICE_SERVERS = [
-    // デフォルトはスキームを含まないホスト:ポート形式で保存（ロード時に復元するため）
     { type: 'stun', url: 'stun.l.google.com:19302', username: '', password: '' }
 ];
 
@@ -68,11 +67,7 @@ function logWarn(message) { outputLog('WARN', message); }
 // ローカルストレージ管理関数
 // =============================
 
-/**
- * 現在のPeerJSとICEサーバー設定をオブジェクトとして取得する
- */
 function getCurrentConfig() {
-    // ローカルストレージ保存用 (forPeerJSConfig=false)
     const iceServers = getIceServersConfig(false); 
 
     return {
@@ -83,70 +78,47 @@ function getCurrentConfig() {
             secure: document.getElementById('peerjs-secure').checked,
         },
         iceServers: iceServers.length > 0 ? iceServers : DEFAULT_ICE_SERVERS,
-        // メディアソース選択の保存を追加
         mediaSource: mediaSourceSelect.value 
     };
 }
 
-/**
- * 設定をローカルストレージに保存する
- */
 function saveConfig() {
     const config = getCurrentConfig();
     try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(config));
-        logInfo('設定をローカルストレージに保存しました。');
     } catch (e) {
-        logError('ローカルストレージへの保存に失敗しました。');
+        console.error('LocalStorage save failed', e);
     }
 }
 
-/**
- * ローカルストレージから設定を読み込み、フォームに反映する
- */
 function loadConfig() {
     try {
         const storedConfigJson = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (!storedConfigJson) {
-            logInfo('保存された設定はありません。デフォルト設定を使用します。');
             populateIceTable(DEFAULT_ICE_SERVERS);
-            mediaSourceSelect.value = 'monitor'; // デフォルト設定
+            mediaSourceSelect.value = 'monitor';
             return;
         }
 
         const config = JSON.parse(storedConfigJson);
-        logInfo('ローカルストレージから設定を読み込みました。');
 
-        // PeerJS設定の反映
         document.getElementById('peerjs-host').value = config.peerjs.host || '0.peerjs.com';
         document.getElementById('peerjs-port').value = config.peerjs.port || '443';
         document.getElementById('peerjs-path').value = config.peerjs.path || '/';
         document.getElementById('peerjs-secure').checked = config.peerjs.secure !== false;
 
-        // ICEサーバー設定の反映
         populateIceTable(config.iceServers || DEFAULT_ICE_SERVERS);
-        
-        // メディアソース設定の反映
         mediaSourceSelect.value = config.mediaSource || 'monitor';
 
     } catch (e) {
-        logError('ローカルストレージ設定の読み込み/解析に失敗しました。デフォルト設定を使用します。');
         populateIceTable(DEFAULT_ICE_SERVERS);
         mediaSourceSelect.value = 'monitor';
     }
 }
 
-/**
- * ICE設定配列に基づいてテーブルを再構築する
- * @param {Array<object>} servers - [{type, url, username, password}, ...] 形式のサーバーリスト
- */
 function populateIceTable(servers) {
-    // 既存の行をクリア
     iceTableBody.innerHTML = '';
-    
-    if (servers.length === 0) {
-        servers = DEFAULT_ICE_SERVERS;
-    }
+    if (servers.length === 0) servers = DEFAULT_ICE_SERVERS;
 
     servers.forEach(server => {
         const newRow = createIceEntryRow(
@@ -157,7 +129,6 @@ function populateIceTable(servers) {
         );
         iceTableBody.appendChild(newRow);
     });
-    // テーブル変更時に保存を試みる
     saveConfig();
 }
 
@@ -166,32 +137,20 @@ function populateIceTable(servers) {
 // ICEサーバー設定の管理関数
 // =============================
 
-/**
- * 選択タイプに基づいてプレースホルダーを返すヘルパー関数
- */
 function getPlaceholder(type) {
     switch(type) {
-        case 'stun':
-            // 修正: プレースホルダーからスキームを削除 (ユーザー入力はホスト:ポートのみに)
-            return '例: stun.l.google.com:19302'; 
-        case 'turn':
-            return '例: turn.example.com:3478';
-        case 'turns':
-            return '例: turn.mattuu.com:5349';
-        default:
-            return 'ホスト:ポート形式 (例: server.com:3478)';
+        case 'stun': return '例: stun.l.google.com:19302'; 
+        case 'turn': return '例: turn.example.com:3478';
+        case 'turns': return '例: turn.mattuu.com:5349';
+        default: return 'ホスト:ポート形式 (例: server.com:3478)';
     }
 }
 
-/**
- * テーブルの行テンプレート
- */
 function createIceEntryRow(type = 'turn', url = '', username = '', password = '') {
     const isStunSelected = type === 'stun' ? 'selected' : '';
     const isTurnSelected = type === 'turn' ? 'selected' : '';
     const isTurnsSelected = type === 'turns' ? 'selected' : '';
 
-    // 修正箇所: プレースホルダーをヘルパー関数から取得
     const placeholder = getPlaceholder(type); 
     
     const row = document.createElement('tr');
@@ -210,55 +169,38 @@ function createIceEntryRow(type = 'turn', url = '', username = '', password = ''
         <td><button type="button" class="remove-ice-entry">×</button></td>
     `;
     
-    // イベントリスナーを設定
     row.querySelectorAll('input, select').forEach(element => {
-        // select要素の変更時にプレースホルダーを更新し、保存するロジック
         if (element.classList.contains('ice-type')) {
             element.addEventListener('change', (e) => {
                 const newType = e.target.value;
                 const urlInput = row.querySelector('.ice-url');
-                
-                // 修正箇所: プレースホルダーの更新
                 urlInput.placeholder = getPlaceholder(newType);
                 saveConfig(); 
             });
         } else {
-            element.addEventListener('change', saveConfig); // 変更時に保存
+            element.addEventListener('change', saveConfig);
         }
     });
     
     const removeButton = row.querySelector('.remove-ice-entry');
     removeButton.addEventListener('click', (e) => {
-        // 最後の1行は削除できないようにする
         if (iceTableBody.querySelectorAll('.ice-entry').length > 1) {
             e.target.closest('.ice-entry').remove();
-            logInfo('ICEサーバー設定を1つ削除しました。');
-            saveConfig(); // 削除後に保存
+            saveConfig();
         } else {
-            logWarn('ICEサーバー設定は最低1つ（デフォルトのSTUN）が必要です。');
+            alert('ICEサーバー設定は最低1つ必要です。');
         }
     });
     return row;
 }
 
-/**
- * 「ICEサーバーを追加」ボタンのクリックイベント
- */
 addIceEntryButton.addEventListener('click', () => {
-    // 新規追加はTURNをデフォルトに
     const newRow = createIceEntryRow('turn', '', '', ''); 
     iceTableBody.appendChild(newRow);
-    logInfo('新しいICEサーバー設定の行を追加しました。');
-    saveConfig(); // 追加後に保存
+    saveConfig();
 });
 
 
-/**
- * ICEサーバー設定テーブルからPeerJS用のconfigオブジェクトを生成する
- * * @param {boolean} forPeerJSConfig - PeerJSのconfig形式 (url, username, credential)で返すか、
- * ローカルストレージ保存用の生形式 (type, url, username, password)で返すか
- * @returns {Array<object>} 
- */
 function getIceServersConfig(forPeerJSConfig = true) {
     const servers = [];
     const rows = iceTableBody.querySelectorAll('.ice-entry');
@@ -270,34 +212,24 @@ function getIceServersConfig(forPeerJSConfig = true) {
         const password = row.querySelector('.ice-password').value.trim();
 
         if (url) { 
-            // PeerJS設定用の場合
             if (forPeerJSConfig) {
-                // 修正箇所: URLにタイプスキームを付与 (type:url 形式)
-                // STUN/TURN/TURNS のスキームを付与
+                // URLにタイプスキームを付与
                 url = `${type}:${url}`;
-
-                // PeerJSのconfig形式 (url キーを使用)
                 const server = { url: url }; 
-                
-                // 認証情報も古い形式に合わせて credential を使用
                 if ((type === 'turn' || type === 'turns') && username && password) {
                     server.username = username; 
                     server.credential = password;
                 }
                 servers.push(server);
             } else {
-                // ローカルストレージ保存用の生形式 (スキームなしのホスト:ポート形式を保存)
                 servers.push({ type, url, username, password });
             }
         }
     });
 
     if (servers.length === 0 && forPeerJSConfig) {
-        logWarn('ICEサーバーが設定されていません。接続が失敗する可能性があります。');
-        // デフォルトも url キーで返す (type:url 形式にする)
         return [{ url: 'stun:stun.l.google.com:19302' }]; 
     }
-    
     return servers;
 }
 
@@ -362,16 +294,25 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
         connectMediaButton.disabled = true;
     });
 
-    // メディア接続の受信イベントハンドラ
+    // ==========================================
+    // データ接続の受信 (修正: 着信時もハンドルする)
+    // ==========================================
+    peer.on('connection', (conn) => {
+        logInfo(`新しいDataConnection接続リクエストを受信しました (PeerID: ${conn.peer})`);
+        handleDataConnection(conn);
+    });
+
+    // ==========================================
+    // メディア接続の受信 (修正: 自動応答)
+    // ==========================================
     peer.on('call', (call) => {
         logInfo(`新しいMediaConnection接続リクエストを受信しました (PeerID: ${call.peer})`);
         
-        if (!localStream) {
-            logError('ローカルストリームが取得されていません。画面共有を開始してから応答してください。');
-            return;
-        }
-
-        call.answer(localStream);
+        // ローカルストリームがなくても応答する (受信専用モードになる場合がある)
+        // ストリームがあれば送る、なければ undefined を渡して受信のみ行う
+        call.answer(localStream || undefined);
+        
+        logInfo('自動応答しました (受信モード)。相手のストリームを待ちます...');
         handleMediaConnection(call);
     });
 });
@@ -381,9 +322,6 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
 // メディアストリーム処理
 // =============================
 
-/**
- * 画面またはカメラのストリームを取得し、ローカル映像に表示する
- */
 startScreenShareButton.addEventListener('click', async () => {
     const source = mediaSourceSelect.value;
     logInfo(`メディアストリーム取得中... ソース: ${source}`);
@@ -392,56 +330,38 @@ startScreenShareButton.addEventListener('click', async () => {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
         localVideo.srcObject = null;
-        logWarn('既存のローカルストリームを停止しました。');
     }
 
-    const constraints = {};
     try {
         if (source === 'monitor') {
-            // 画面共有 (getDisplayMedia)
             localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         } else if (source === 'camera') {
-            // カメラ/マイク (getUserMedia)
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        } else {
-            logError('無効なメディアソースが選択されました。');
-            return;
         }
 
         localVideo.srcObject = localStream;
-        logInfo(`ローカルストリームを取得しました (Tracks: Video=${localStream.getVideoTracks().length}, Audio=${localStream.getAudioTracks().length})`);
+        logInfo(`ローカルストリームを取得しました (Tracks: ${localStream.getTracks().length})`);
 
-        // ストリーム終了イベントを監視
         localStream.getVideoTracks()[0].onended = () => {
-            logWarn('ローカルのメディアストリームがユーザーによって停止されました。');
+            logWarn('ローカルのメディアストリームが停止されました。');
             localStream = null;
             localVideo.srcObject = null;
         };
 
     } catch (err) {
-        logError(['メディアストリームの取得に失敗しました:', err.name, err.message]);
+        logError(['メディアストリームの取得に失敗:', err.name]);
     }
 });
 
 
-/**
- * MediaConnectionを開始 (発信側)
- */
 connectMediaButton.addEventListener('click', () => {
-    if (!peer || peer.destroyed) {
-        logWarn('PeerJSが未接続です。');
-        return;
-    }
+    if (!peer || peer.destroyed) return;
     if (!localStream) {
-        logWarn('ローカルストリームが取得されていません。「画面/カメラ共有開始」ボタンを押してください。');
-        return;
+        logWarn('ローカルストリームがありませんが、受信専用で接続を試みます。');
     }
     
     const targetId = document.getElementById('target-id').value;
-    if (!targetId) {
-        logWarn('接続先の Peer ID を入力してください。');
-        return;
-    }
+    if (!targetId) return;
 
     logInfo(`MediaConnectionを試行中... 接続先: ${targetId}`);
     
@@ -450,59 +370,41 @@ connectMediaButton.addEventListener('click', () => {
 });
 
 
-/**
- * MediaConnectionオブジェクトのイベントハンドラを設定
- * @param {PeerJS.MediaConnection} call 
- */
 function handleMediaConnection(call) {
     if (mediaConnection) {
         mediaConnection.close();
-        logWarn('既存のMediaConnectionを切断しました。');
-        remoteVideo.srcObject = null;
     }
     mediaConnection = call;
 
     call.on('stream', (remoteStream) => {
-        logInfo(`MediaConnection確立: リモートストリームを受信しました (相手: ${call.peer})`);
+        logInfo(`🎥 リモート映像を受信しました (相手: ${call.peer})`);
+        // 自動的に映像をセットして再生
         remoteVideo.srcObject = remoteStream;
+        remoteVideo.play().catch(e => console.error('自動再生エラー:', e));
     });
 
     call.on('close', () => {
-        logWarn(`MediaConnectionが閉じられました (相手: ${call.peer})`);
+        logWarn(`MediaConnectionが終了しました (相手: ${call.peer})`);
         remoteVideo.srcObject = null;
-        if (mediaConnection && mediaConnection.peer === call.peer) {
-            mediaConnection = null;
-        }
     });
 
     call.on('error', (err) => {
         logError(['MediaConnectionエラー:', err]);
-        remoteVideo.srcObject = null;
     });
 }
 
 
 // =============================
-// データ接続
+// データ接続処理 (修正: ログ表示の強化)
 // =============================
 
 document.getElementById('connect-data').addEventListener('click', () => {
-    if (!peer || peer.destroyed) {
-        logWarn('PeerJSが未接続です。「PeerJS 接続 & ID取得」ボタンを押してください。');
-        return;
-    }
-    
+    if (!peer || peer.destroyed) return;
     const targetId = document.getElementById('target-id').value;
-    if (!targetId) {
-        logWarn('接続先の Peer ID を入力してください。');
-        return;
-    }
+    if (!targetId) return;
 
     if (dataConnection) {
         dataConnection.close();
-        dataConnection = null;
-        document.getElementById('send-message').disabled = true;
-        logWarn('既存のDataConnectionを切断しました。');
     }
 
     logInfo(`DataConnectionを試行中... 接続先: ${targetId}`);
@@ -510,26 +412,30 @@ document.getElementById('connect-data').addEventListener('click', () => {
     handleDataConnection(dataConnection);
 });
 
-/**
- * DataConnectionオブジェクトのイベントハンドラを設定
- * @param {PeerJS.DataConnection} conn 
- */
 function handleDataConnection(conn) {
-    
     conn.on('open', () => {
         dataConnection = conn;
-        logInfo(`DataConnectionが確立しました (相手: ${conn.peer})`);
+        logInfo(`DataConnection確立成功 ✅ (相手: ${conn.peer})`);
         document.getElementById('send-message').disabled = false;
     });
 
-    // メッセージ受信時のログ出力を追加
+    // ★修正: データ受信時のログ出力を確実に ★
     conn.on('data', (data) => {
-        logInfo(`データ受信 📥 (相手: ${conn.peer}): ${data}`);
+        let displayData = data;
+        // オブジェクトの場合は文字列化して表示
+        if (typeof data === 'object') {
+            try {
+                displayData = JSON.stringify(data);
+            } catch(e) {
+                displayData = data.toString();
+            }
+        }
+        logInfo(`📩 データ受信 (from ${conn.peer}): ${displayData}`);
     });
 
     conn.on('close', () => {
-        logWarn(`DataConnectionが閉じられました (相手: ${conn.peer})`);
-        if (dataConnection && dataConnection.peer === conn.peer) {
+        logWarn(`DataConnection切断 (相手: ${conn.peer})`);
+        if (dataConnection === conn) {
             dataConnection = null;
             document.getElementById('send-message').disabled = true;
         }
@@ -541,37 +447,27 @@ function handleDataConnection(conn) {
 }
 
 document.getElementById('send-message').addEventListener('click', () => {
-    if (!dataConnection) {
-        logWarn('DataConnectionが確立していません。接続を開始してください。');
-        return;
-    }
-
+    if (!dataConnection) return;
     const data = document.getElementById('send-data').value;
-    logInfo(`データ送信 📤 (相手: ${dataConnection.peer}): ${data}`);
+    logInfo(`📤 データ送信 (to ${dataConnection.peer}): ${data}`);
     dataConnection.send(data);
 });
 
 
 // =============================
-// ログクリア
+// その他
 // =============================
 
 document.getElementById('clear-log').addEventListener('click', () => {
     logOutput.innerHTML = '';
 });
 
-// =============================
-// ページロード時の処理
-// =============================
 window.addEventListener('load', () => {
     loadConfig();
     
-    // PeerJS設定の変更を監視し、自動保存する
     document.getElementById('peerjs-host').addEventListener('change', saveConfig);
     document.getElementById('peerjs-port').addEventListener('change', saveConfig);
     document.getElementById('peerjs-path').addEventListener('change', saveConfig);
     document.getElementById('peerjs-secure').addEventListener('change', saveConfig);
-    
-    // メディアソース選択の変更を監視し、自動保存する
     mediaSourceSelect.addEventListener('change', saveConfig);
 });
