@@ -35,7 +35,6 @@ const DEFAULT_ICE_SERVERS = [
 // =============================
 // デバッグログ関数
 // =============================
-// ... (outputLog, logInfo, logError, logWarn 関数は変更なし) ...
 
 /**
  * ログエリアにメッセージを出力
@@ -263,7 +262,6 @@ function getIceServersConfig(forPeerJSConfig = true) {
 // =============================
 // PeerJS 初期化
 // =============================
-// ... (PeerJS接続ロジックは変更なし。saveConfig()を呼び出す点のみ変更なし) ...
 
 document.getElementById('connect-peerjs').addEventListener('click', () => {
     saveConfig(); 
@@ -287,7 +285,7 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
         config: {
             iceServers: iceServers
         },
-        debug: 3
+        debug: 3 // 修正箇所: PeerJSのデバッグレベルを3 (全て) に設定
     };
 
     logInfo(['PeerJS接続設定:', config]);
@@ -306,8 +304,7 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
         document.getElementById('my-id').value = id;
         statusMessage.textContent = `接続済み (ID: ${id})`;
         peerSection.style.display = 'block';
-        connectMediaButton.disabled = false; // Peer接続時にメディア接続ボタンを有効化
-
+        connectMediaButton.disabled = false;
     });
 
     peer.on('error', (err) => {
@@ -323,17 +320,15 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
         connectMediaButton.disabled = true;
     });
 
-    // メディア接続の受信イベントハンドラ (追加)
+    // メディア接続の受信イベントハンドラ
     peer.on('call', (call) => {
         logInfo(`新しいMediaConnection接続リクエストを受信しました (PeerID: ${call.peer})`);
         
-        // すでにローカルストリームが取得されているか確認
         if (!localStream) {
             logError('ローカルストリームが取得されていません。画面共有を開始してから応答してください。');
             return;
         }
 
-        // 応答し、ローカルストリームを送信
         call.answer(localStream);
         handleMediaConnection(call);
     });
@@ -341,7 +336,7 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
 
 
 // =============================
-// メディアストリーム処理 (追加)
+// メディアストリーム処理
 // =============================
 
 /**
@@ -351,7 +346,6 @@ startScreenShareButton.addEventListener('click', async () => {
     const source = mediaSourceSelect.value;
     logInfo(`メディアストリーム取得中... ソース: ${source}`);
     
-    // 既存のストリームがあれば停止
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
@@ -409,7 +403,6 @@ connectMediaButton.addEventListener('click', () => {
 
     logInfo(`MediaConnectionを試行中... 接続先: ${targetId}`);
     
-    // PeerJS callメソッドでストリームを送信
     const call = peer.call(targetId, localStream);
     handleMediaConnection(call);
 });
@@ -448,9 +441,8 @@ function handleMediaConnection(call) {
 
 
 // =============================
-// データ接続 (既存ロジック - 変更なし)
+// データ接続
 // =============================
-// ... (connect-data, handleDataConnection, send-message ロジックは変更なし) ...
 
 document.getElementById('connect-data').addEventListener('click', () => {
     if (!peer || peer.destroyed) {
@@ -488,8 +480,9 @@ function handleDataConnection(conn) {
         document.getElementById('send-message').disabled = false;
     });
 
+    // 修正箇所: メッセージ受信時のログ出力を追加
     conn.on('data', (data) => {
-        logInfo(`データ受信 (相手: ${conn.peer}): ${data}`);
+        logInfo(`データ受信 📥 (相手: ${conn.peer}): ${data}`);
     });
 
     conn.on('close', () => {
@@ -512,7 +505,7 @@ document.getElementById('send-message').addEventListener('click', () => {
     }
 
     const data = document.getElementById('send-data').value;
-    logInfo(`データ送信 (相手: ${dataConnection.peer}): ${data}`);
+    logInfo(`データ送信 📤 (相手: ${dataConnection.peer}): ${data}`);
     dataConnection.send(data);
 });
 
@@ -537,6 +530,6 @@ window.addEventListener('load', () => {
     document.getElementById('peerjs-path').addEventListener('change', saveConfig);
     document.getElementById('peerjs-secure').addEventListener('change', saveConfig);
     
-    // メディアソース選択の変更を監視し、自動保存する (追加)
+    // メディアソース選択の変更を監視し、自動保存する
     mediaSourceSelect.addEventListener('change', saveConfig);
 });

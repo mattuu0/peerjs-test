@@ -12,108 +12,110 @@
         <p>設定を入力し、PeerIDを取得後、別のタブ/PCで接続テストを行ってください。</p>
     </header>
 
-    <div class="container">
-        
-        <section id="config-section">
-            <h2>接続設定</h2>
+    <div class="main-layout-container">
 
-            <div class="input-group">
-                <label for="peerjs-host">PeerJS サーバーホスト:</label>
-                <input type="text" id="peerjs-host" value="0.peerjs.com" placeholder="例: my-peer-server.com">
-            </div>
-            <div class="input-group">
-                <label for="peerjs-port">PeerJS サーバーポート:</label>
-                <input type="number" id="peerjs-port" value="443" placeholder="例: 9000">
-            </div>
-            <div class="input-group">
-                <label for="peerjs-path">PeerJS サーバーパス:</label>
-                <input type="text" id="peerjs-path" value="/" placeholder="例: /myapp">
-            </div>
-            <div class="input-group">
-                <label for="peerjs-secure">PeerJS サーバー SSL/TLS:</label>
-                <input type="checkbox" id="peerjs-secure" checked> (チェックで secure: true)
-            </div>
-
-            <div class="input-group">
-                <label>ICE サーバー (STUN/TURN) 設定:</label>
-                <div id="ice-servers-container">
-                    <table id="ice-table">
-                        <thead>
-                            <tr>
-                                <th>種類 (stun/turn/turns)</th>
-                                <th>アドレス (URL)</th>
-                                <th>ユーザー名</th>
-                                <th>パスワード</th>
-                                <th>削除</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            </tbody>
-                    </table>
-                </div>
-                <button type="button" id="add-ice-entry">ICEサーバーを追加</button>
-            </div>
+        <div class="left-panel">
             
-            <button id="connect-peerjs">PeerJS 接続 & ID取得</button>
-            <div id="status" class="status-message">未接続</div>
+            <section id="config-section">
+                <h2>接続設定</h2>
 
-        </section>
-
-        <hr>
-
-        <section id="peer-section" style="display: none;">
-            <h2>ピア接続 & メディア</h2>
-            
-            <div class="input-group">
-                <label for="my-id">あなたの Peer ID:</label>
-                <input type="text" id="my-id" readonly>
-            </div>
-
-            <div class="input-group">
-                <label for="target-id">接続先 Peer ID:</label>
-                <input type="text" id="target-id" placeholder="相手の Peer ID を入力">
-            </div>
-
-            <button id="connect-data">データ接続開始</button>
-            <button id="send-message" disabled>メッセージ送信</button>
-
-            <div class="input-group">
-                <label for="send-data">送信データ:</label>
-                <input type="text" id="send-data" value="Hello Peer!">
-            </div>
-
-            <h3 style="margin-top: 20px;">画面共有設定</h3>
-            <div class="input-group">
-                <label for="media-source">ソース選択 (Media Source):</label>
-                <select id="media-source">
-                    <option value="monitor">デスクトップ/モニター (Screen Share)</option>
-                    <option value="camera">カメラ (Webcam)</option>
-                </select>
-            </div>
-            <button id="start-screen-share">画面/カメラ共有開始</button>
-            <button id="connect-media" disabled>メディア接続開始 (Call)</button>
-
-            <div class="video-container">
-                <div class="video-box">
-                    <h4>ローカル映像/画面</h4>
-                    <video id="local-video" autoplay muted playsinline></video>
+                <div class="input-group">
+                    <label for="peerjs-host">PeerJS サーバーホスト:</label>
+                    <input type="text" id="peerjs-host" value="0.peerjs.com" placeholder="例: my-peer-server.com">
                 </div>
-                <div class="video-box">
-                    <h4>リモート映像/画面</h4>
-                    <video id="remote-video" autoplay playsinline></video>
+                <div class="input-group">
+                    <label for="peerjs-port">PeerJS サーバーポート:</label>
+                    <input type="number" id="peerjs-port" value="443" placeholder="例: 9000">
                 </div>
-            </div>
+                <div class="input-group">
+                    <label for="peerjs-path">PeerJS サーバーパス:</label>
+                    <input type="text" id="peerjs-path" value="/" placeholder="例: /myapp">
+                </div>
+                <div class="input-group">
+                    <label for="peerjs-secure">PeerJS サーバー SSL/TLS:</label>
+                    <input type="checkbox" id="peerjs-secure" checked> (チェックで secure: true)
+                </div>
 
-        </section>
+                <div class="input-group">
+                    <label>ICE サーバー (STUN/TURN) 設定:</label>
+                    <div id="ice-servers-container">
+                        <table id="ice-table">
+                            <thead>
+                                <tr>
+                                    <th>種類 (stun/turn/turns)</th>
+                                    <th>アドレス (URL)</th>
+                                    <th>ユーザー名</th>
+                                    <th>パスワード</th>
+                                    <th>削除</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                    <button type="button" id="add-ice-entry">ICEサーバーを追加</button>
+                </div>
+                
+                <button id="connect-peerjs">PeerJS 接続 & ID取得</button>
+                <div id="status" class="status-message">未接続</div>
 
-        <hr>
+            </section>
 
-        <section id="log-section">
-            <h2>デバッグログ 🐛</h2>
-            <button id="clear-log">ログクリア</button>
-            <pre id="log-output"></pre>
-        </section>
+            <hr>
 
+            <section id="peer-section" style="display: none;">
+                <h2>ピア接続 & メディア</h2>
+                
+                <div class="input-group">
+                    <label for="my-id">あなたの Peer ID:</label>
+                    <input type="text" id="my-id" readonly>
+                </div>
+
+                <div class="input-group">
+                    <label for="target-id">接続先 Peer ID:</label>
+                    <input type="text" id="target-id" placeholder="相手の Peer ID を入力">
+                </div>
+
+                <button id="connect-data">データ接続開始</button>
+                <button id="send-message" disabled>メッセージ送信</button>
+
+                <div class="input-group">
+                    <label for="send-data">送信データ:</label>
+                    <input type="text" id="send-data" value="Hello Peer!">
+                </div>
+
+                <h3 style="margin-top: 20px;">画面共有設定</h3>
+                <div class="input-group">
+                    <label for="media-source">ソース選択 (Media Source):</label>
+                    <select id="media-source">
+                        <option value="monitor">デスクトップ/モニター (Screen Share)</option>
+                        <option value="camera">カメラ (Webcam)</option>
+                    </select>
+                </div>
+                <button id="start-screen-share">画面/カメラ共有開始</button>
+                <button id="connect-media" disabled>メディア接続開始 (Call)</button>
+
+                <div class="video-container">
+                    <div class="video-box">
+                        <h4>ローカル映像/画面</h4>
+                        <video id="local-video" autoplay muted playsinline></video>
+                    </div>
+                    <div class="video-box">
+                        <h4>リモート映像/画面</h4>
+                        <video id="remote-video" autoplay playsinline></video>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+
+        <div class="right-panel">
+            <section id="log-section">
+                <h2>デバッグログ 🐛 (PeerJS Debug Level 3)</h2>
+                <button id="clear-log">ログクリア</button>
+                <pre id="log-output"></pre>
+            </section>
+        </div>
     </div>
 
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
