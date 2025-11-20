@@ -171,6 +171,23 @@ function createIceEntryRow(type = 'turn', url = '', username = '', password = ''
     const isStunSelected = type === 'stun' ? 'selected' : '';
     const isTurnSelected = type === 'turn' ? 'selected' : '';
     const isTurnsSelected = type === 'turns' ? 'selected' : '';
+
+    // 選択されたタイプに基づいてプレースホルダーを設定
+    let placeholder = '';
+    switch(type) {
+        case 'stun':
+            placeholder = '例: stun:stun.l.google.com:19302';
+            break;
+        case 'turn':
+            placeholder = '例: turn:turn.example.com:3478';
+            break;
+        case 'turns':
+            // ユーザー指定の例を反映
+            placeholder = '例: turns:turn.mattuu.com:5349';
+            break;
+        default:
+            placeholder = 'URL形式: type:address:port';
+    }
     
     const row = document.createElement('tr');
     row.classList.add('ice-entry');
@@ -182,7 +199,7 @@ function createIceEntryRow(type = 'turn', url = '', username = '', password = ''
                 <option value="turns" ${isTurnsSelected}>turns</option>
             </select>
         </td>
-        <td><input type="text" class="ice-url" value="${url}" placeholder="例: turns:example.com:443?transport=tcp"></td>
+        <td><input type="text" class="ice-url" value="${url}" placeholder="${placeholder}"></td>
         <td><input type="text" class="ice-username" value="${username}" placeholder="ユーザー名 (TURN/TURNSの場合)"></td>
         <td><input type="password" class="ice-password" value="${password}" placeholder="パスワード (TURN/TURNSの場合)"></td>
         <td><button type="button" class="remove-ice-entry">×</button></td>
@@ -190,7 +207,30 @@ function createIceEntryRow(type = 'turn', url = '', username = '', password = ''
     
     // イベントリスナーを設定
     row.querySelectorAll('input, select').forEach(element => {
-        element.addEventListener('change', saveConfig); // 変更時に保存
+        // select要素の変更時にプレースホルダーを更新し、保存するロジック
+        if (element.classList.contains('ice-type')) {
+            element.addEventListener('change', (e) => {
+                const newType = e.target.value;
+                const urlInput = row.querySelector('.ice-url');
+                
+                let newPlaceholder = '';
+                switch(newType) {
+                    case 'stun':
+                        newPlaceholder = '例: stun:stun.l.google.com:19302';
+                        break;
+                    case 'turn':
+                        newPlaceholder = '例: turn:turn.example.com:3478';
+                        break;
+                    case 'turns':
+                        newPlaceholder = '例: turns:turn.mattuu.com:5349';
+                        break;
+                }
+                urlInput.placeholder = newPlaceholder;
+                saveConfig(); 
+            });
+        } else {
+            element.addEventListener('change', saveConfig); // 変更時に保存
+        }
     });
     
     const removeButton = row.querySelector('.remove-ice-entry');
@@ -221,7 +261,7 @@ addIceEntryButton.addEventListener('click', () => {
 
 /**
  * ICEサーバー設定テーブルからPeerJS用のconfigオブジェクトを生成する
- * @param {boolean} forPeerJSConfig - PeerJSのconfig形式 (urls, username, credential)で返すか、
+ * * @param {boolean} forPeerJSConfig - PeerJSのconfig形式 (url, username, credential)で返すか、
  * ローカルストレージ保存用の生形式 (type, url, username, password)で返すか
  * @returns {Array<object>} 
  */
@@ -237,10 +277,12 @@ function getIceServersConfig(forPeerJSConfig = true) {
 
         if (url) { // URLがある行のみ処理
             if (forPeerJSConfig) {
-                // PeerJSのconfig形式
-                const server = { urls: url };
+                // PeerJSのconfig形式 (修正箇所: url キーを使用)
+                const server = { url: url }; 
+                
+                // 認証情報も古い形式に合わせて credential を使用
                 if ((type === 'turn' || type === 'turns') && username && password) {
-                    server.username = username;
+                    server.username = username; // 古い形式でも username を含めることがある
                     server.credential = password;
                 }
                 servers.push(server);
@@ -253,7 +295,8 @@ function getIceServersConfig(forPeerJSConfig = true) {
 
     if (servers.length === 0 && forPeerJSConfig) {
         logWarn('ICEサーバーが設定されていません。接続が失敗する可能性があります。');
-        return [{ urls: 'stun:stun.l.google.com:19302' }]; 
+        // デフォルトも url キーで返す
+        return [{ url: 'stun:stun.l.google.com:19302' }]; 
     }
     
     return servers;
@@ -275,6 +318,7 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
     const currentConfig = getCurrentConfig();
     const { host, port, path, secure } = currentConfig.peerjs;
     
+    // 修正箇所: getIceServersConfig(true) は url キーを使用する形式を返す
     const iceServers = getIceServersConfig(true); 
 
     const config = {
@@ -283,9 +327,10 @@ document.getElementById('connect-peerjs').addEventListener('click', () => {
         path: path,
         secure: secure,
         config: {
+            // 修正箇所: ここで返される iceServers は url キーを含むオブジェクトの配列
             iceServers: iceServers
         },
-        debug: 3 // 修正箇所: PeerJSのデバッグレベルを3 (全て) に設定
+        debug: 3
     };
 
     logInfo(['PeerJS接続設定:', config]);
@@ -480,7 +525,7 @@ function handleDataConnection(conn) {
         document.getElementById('send-message').disabled = false;
     });
 
-    // 修正箇所: メッセージ受信時のログ出力を追加
+    // メッセージ受信時のログ出力を追加
     conn.on('data', (data) => {
         logInfo(`データ受信 📥 (相手: ${conn.peer}): ${data}`);
     });
